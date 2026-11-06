@@ -16,6 +16,7 @@ function stripId(document) {
 }
 
 export async function connectDb() {
+  if (db) return db.databaseName
   const uri = process.env.MONGODB_URI
   if (!uri) {
     throw new Error('Set MONGODB_URI in the .env file.')

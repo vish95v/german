@@ -29,6 +29,16 @@ const upload = multer({
 app.use(cors())
 app.use(express.json({ limit: '1mb' }))
 
+// Ensure MongoDB is connected for incoming requests (crucial for serverless environments)
+app.use(async (_req, _res, next) => {
+  try {
+    await connectDb()
+    next()
+  } catch (error) {
+    next(error)
+  }
+})
+
 function httpError(status, message) {
   const error = new Error(message)
   error.status = status
@@ -37,6 +47,18 @@ function httpError(status, message) {
 
 const adminSessions = new Set()
 
+function getAdminSecret() {
+  return process.env.ADMIN_PASSWORD || 'question-desk-session-secret'
+}
+
+function createAdminToken() {
+  const timestamp = Date.now().toString()
+  const signature = crypto.createHmac('sha256', getAdminSecret()).update(timestamp).digest('hex')
+  const token = `${timestamp}.${signature}`
+  adminSessions.add(token)
+  return token
+}
+
 function sameSecret(received, expected) {
   const left = Buffer.from(String(received))
   const right = Buffer.from(String(expected))
@@ -44,9 +66,20 @@ function sameSecret(received, expected) {
   return crypto.timingSafeEqual(left, right)
 }
 
+function isValidAdminToken(token) {
+  if (!token) return false
+  if (adminSessions.has(token)) return true
+  const parts = String(token).split('.')
+  if (parts.length !== 2) return false
+  const [timestamp, signature] = parts
+  const expectedSig = crypto.createHmac('sha256', getAdminSecret()).update(timestamp).digest('hex')
+  if (!sameSecret(signature, expectedSig)) return false
+  return Date.now() - Number(timestamp) < 7 * 24 * 60 * 60 * 1000
+}
+
 function requireAdmin(req, res, next) {
   const token = req.get('x-admin-token') || ''
-  if (!adminSessions.has(token)) {
+  if (!isValidAdminToken(token)) {
     return next(httpError(401, 'Sign in with the admin email and password.'))
   }
   next()
@@ -65,8 +98,7 @@ app.post('/api/admin/login', (req, res, next) => {
   if (!emailMatches || !passwordMatches) {
     return next(httpError(401, 'That email or password is not valid.'))
   }
-  const token = crypto.randomBytes(32).toString('hex')
-  adminSessions.add(token)
+  const token = createAdminToken()
   res.json({ token })
 })
 
@@ -284,15 +316,19 @@ app.use((error, _req, res, _next) => {
   res.status(status).json({ error: error.message || 'Something went wrong.' })
 })
 
-connectDb()
-  .then(() => {
-    app.listen(port, () => {
-      console.log(`Question Desk API on http://127.0.0.1:${port}`)
-      console.log('MongoDB database: questiondesk')
+if (!process.env.VERCEL) {
+  connectDb()
+    .then(() => {
+      app.listen(port, () => {
+        console.log(`Question Desk API on http://127.0.0.1:${port}`)
+        console.log('MongoDB database: questiondesk')
+      })
     })
-  })
-  .catch((error) => {
-    const message = String(error?.message || error).replace(/\/\/[^@\s]+@/, '//***@')
-    console.error(`MongoDB connection failed. ${message}`)
-    process.exit(1)
-  })
+    .catch((error) => {
+      const message = String(error?.message || error).replace(/\/\/[^@\s]+@/, '//***@')
+      console.error(`MongoDB connection failed. ${message}`)
+      process.exit(1)
+    })
+}
+
+export default app

@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "echo 'No build required for server'",
     "dev": "node --watch index.js",
     "start": "node index.js",
     "test": "node --test"
