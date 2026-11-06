@@ -1,5 +1,10 @@
 
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+const BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_BACKEND_URL ||
+  ''
+).replace(/\/$/, '')
 const ADMIN_TOKEN = 'question-desk-session'
 
 export function getAdminToken() {

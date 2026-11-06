@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => {
     env.VITE_API_BASE_URL ||
     env.VITE_API_URL ||
     env.VITE_BACKEND_URL ||
+    env.API_URL ||
+    env.BACKEND_URL ||
+    env.REACT_APP_API_URL ||
     ''
 
   return {
