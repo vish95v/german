@@ -1,3 +1,6 @@
+
+import dotenv from 'dotenv'
+const BASE_URL = (process.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 const ADMIN_TOKEN = 'question-desk-session'
 
 export function getAdminToken() {
@@ -18,7 +21,8 @@ export async function api(path, { admin = false, body, method = 'GET', headers =
     requestHeaders['Content-Type'] = 'application/json'
     payload = JSON.stringify(body)
   }
-  const response = await fetch(path, { method, headers: requestHeaders, body: payload })
+  const url = `${BASE_URL}${path}`
+  const response = await fetch(url, { method, headers: requestHeaders, body: payload })
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
     throw new Error(data.error || 'Request failed')
