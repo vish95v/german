@@ -1,4 +1,5 @@
 
+import dotenv from 'dotenv'
 const BASE_URL = (process.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 const ADMIN_TOKEN = 'question-desk-session'
 
